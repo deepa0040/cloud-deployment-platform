@@ -1,0 +1,31 @@
+[Unit]
+Description=Node.js Sample Application
+Documentation=file:///var/www/sample-app/README.md
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/var/www/sample-app
+
+# Use NVM to load Node.js
+ExecStart=/bin/bash -c 'source /home/ubuntu/.nvm/nvm.sh && nvm use default && npm start'
+
+# Restart policy
+Restart=always
+RestartSec=5s
+
+# Logging
+StandardOutput=append:/var/log/sample-app/app.log
+StandardError=append:/var/log/sample-app/error.log
+
+# Resource limits (optional)
+MemoryLimit=512M
+CPUQuota=50%
+
+# Environment variables
+Environment="NODE_ENV=production"
+Environment="NODE_PORT=3000"
+
+[Install]
+WantedBy=multi-user.target
