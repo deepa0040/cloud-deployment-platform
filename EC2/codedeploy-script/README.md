@@ -1,4 +1,4 @@
-# CodeDeploy Infrastructure & Application
+v# CodeDeploy Infrastructure & Application
 
 ## Project Overview
 
@@ -17,7 +17,7 @@ This project implements a complete **CI/CD pipeline** using AWS services to auto
 ## Project Structure
 
 ```
-/home/deepa/project/deployent/
+/home/deepa/project/cloud-deployment-platform/EC2/codedeploy-script/
 ├── README.md                          # This file
 ├── app.md                             # Application code explanation
 ├── issues.md                          # Detailed issue documentation
@@ -87,7 +87,7 @@ This project implements a complete **CI/CD pipeline** using AWS services to auto
 
 ### Step 1: Initialize Terraform
 ```bash
-cd /home/deepa/project/deployent
+cd /home/deepa/project/cloud-deployment-platform/EC2/codedeploy-script
 terraform init
 ```
 
@@ -102,6 +102,56 @@ This creates:
 - CodeDeploy application & deployment group
 - IAM roles and instance profile
 - S3 bucket for deployment artifacts
+
+### Step 2.5: Create/Verify S3 Bucket (if missing)
+
+If the S3 bucket doesn't exist then manually create it using AWS CLI:
+
+```bash
+# Create S3 bucket for deployment artifacts
+BUCKET_NAME="my-codedeploy-bucket-$(date +%s)"
+aws s3 mb s3://${BUCKET_NAME} --region us-east-1
+
+# Verify bucket was created
+aws s3 ls | grep ${BUCKET_NAME}
+
+```
+
+**Note:** The EC2 instance IAM role must have `s3:GetObject` and `s3:GetObjectVersion` permissions to pull deployment artifacts from this bucket.
+
+### Why EC2 Server Needs S3 Bucket Access
+
+The EC2 instance requires S3 bucket access for the following critical reasons:
+
+1. **CodeDeploy Agent Retrieval**
+   - The CodeDeploy agent running on EC2 automatically downloads the application bundle (`.tar.gz`) from S3
+   - This happens during the `DownloadBundle` lifecycle phase
+   - Without S3 access, CodeDeploy agent cannot fetch your application code
+
+2. **Autonomous Deployment Process**
+   - The deployment is initiated by CodeDeploy service, not a human operator
+   - The EC2 instance itself must authenticate to S3 using its IAM role
+   - This eliminates the need for hardcoded AWS credentials on the instance
+
+3. **Security Best Practice**
+   - Using IAM roles is more secure than storing credentials in config files
+   - The IAM role is automatically assumed by the EC2 instance
+   - Follows the principle of least privilege (only S3 read access needed)
+
+4. **Complete Deployment Flow**
+   ```
+   AWS CodeDeploy Service
+         ↓
+   Triggers EC2 CodeDeploy Agent
+         ↓
+   Agent uses EC2 IAM Role to authenticate
+         ↓
+   Downloads app bundle from S3 using EC2's temporary credentials
+         ↓
+   Executes lifecycle scripts (install, start, validate)
+   ```
+
+
 
 ### Step 3: Deploy Application
 ```bash
